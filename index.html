@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Replacement Theory: live simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="masthead" data-title="Replacement Theory Simulator">
+  <div class="masthead-text">
+    <h1>When should you replace it?</h1>
+    <p>Replacement theory simulator for Management Science, Module IV</p>
+  </div>
+  <div class="tabs" role="tablist" aria-label="Choose a scenario">
+    <button class="tab" role="tab" id="tab-machine" aria-selected="true" aria-controls="panel-machine">Machine that wears out</button>
+    <button class="tab" role="tab" id="tab-bulbs" aria-selected="false" aria-controls="panel-bulbs" tabindex="-1">Bulbs that fail suddenly</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ================= SCENARIO 1: GRADUAL DETERIORATION ================= -->
+<section id="panel-machine" class="panel" role="tabpanel" aria-labelledby="tab-machine">
+  <div class="layout">
+
+    <aside class="card inputs" data-title="Machine Settings">
+      <h2>The machine</h2>
+      <label>Purchase cost (C)
+        <span class="field"><b>₹</b><input id="mC" type="number" min="0" step="500" value="12000"></span>
+      </label>
+      <label>Scrap value (S)
+        <span class="field"><b>₹</b><input id="mS" type="number" min="0" step="500" value="2000"></span>
+      </label>
+      <label>Running cost in year 1
+        <span class="field"><b>₹</b><input id="mR0" type="number" min="0" step="100" value="1000"></span>
+      </label>
+      <label>Running cost rises every year by
+        <span class="field"><b>₹</b><input id="mInc" type="number" min="0" step="100" value="400"></span>
+      </label>
+      <label>Years to look ahead
+        <span class="field"><input id="mH" type="number" min="2" max="20" step="1" value="10"></span>
+      </label>
+      <label>Discount rate
+        <span class="field"><input id="mRate" type="number" min="0" max="50" step="1" value="0"><b>%</b></span>
+        <small>0% ignores the time value of money (Model 1). Above 0% weights later years less (Model 2).</small>
+      </label>
+      <button class="ghost" id="mPreset" type="button">Back to the slide problem</button>
+    </aside>
+
+    <div class="stage">
+
+      <div class="card status keep" id="mStatus" data-title="Machine Monitor">
+        <div class="status-main">
+          <svg class="gear" id="mGear" viewBox="-50 -50 100 100" aria-hidden="true">
+            <g fill="currentColor">
+              <rect x="-6" y="-48" width="12" height="18" rx="2"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(45)"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(90)"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(135)"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(180)"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(225)"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(270)"/>
+              <rect x="-6" y="-48" width="12" height="18" rx="2" transform="rotate(315)"/>
+              <circle r="34"/>
+            </g>
+            <circle r="13" fill="#fff"/>
+          </svg>
+          <div>
+            <div class="big" id="mYear">Brand new</div>
+            <div class="sub" id="mSub"></div>
+          </div>
+        </div>
+        <dl class="figures">
+          <div><dt>Average cost so far</dt><dd id="mAvg">–</dd></div>
+          <div><dt>Next year's running cost</dt><dd id="mNext">–</dd></div>
+          <div><dt>Average if kept one more year</dt><dd id="mAvgNext">–</dd></div>
+        </dl>
+        <p class="verdict" id="mVerdict" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="card chartcard" data-title="Cost Chart">
+        <div class="legend">
+          <span><i class="sw bar"></i>Running cost in that year</span>
+          <span><i class="sw line"></i>Average cost per year so far</span>
+          <span><i class="sw best"></i>Lowest average</span>
+        </div>
+        <canvas id="mChart" class="chart" aria-label="Chart of running cost and average cost per year"></canvas>
+        <div class="controls">
+          <button class="btn" id="mBack" type="button">Back</button>
+          <button class="btn primary" id="mNextBtn" type="button">Next year</button>
+          <button class="btn" id="mPlay" type="button">Play</button>
+          <button class="btn danger" id="mReplace" type="button">Replace now</button>
+          <button class="btn" id="mReset" type="button">Start over</button>
+          <label class="check"><input type="checkbox" id="mFull"> Show the whole curve</label>
+        </div>
+      </div>
+
+      <div class="card result" id="mResult" data-title="Your Decision" hidden>
+        <h2 id="mResTitle"></h2>
+        <p id="mResBody"></p>
+      </div>
+
+      <div class="card tablecard" data-title="Cost Table">
+        <div class="table-wrap"><table id="mTable"></table></div>
+        <p class="formula">Average cost A(n) = [C − S + running costs for n years] ÷ n. Replace when next year's running cost is above A(n).</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= SCENARIO 2: SUDDEN FAILURE ================= -->
+<section id="panel-bulbs" class="panel" role="tabpanel" aria-labelledby="tab-bulbs" hidden>
+  <div class="layout">
+
+    <aside class="card inputs" data-title="Bulb Settings">
+      <h2>The bulbs</h2>
+      <label>Number of bulbs
+        <span class="field"><input id="bN" type="number" min="10" max="5000" step="100" value="1000"></span>
+      </label>
+      <label>Replacing one failed bulb
+        <span class="field"><b>₹</b><input id="bCi" type="number" min="0" step="0.5" value="5"></span>
+      </label>
+      <label>Per bulb, when all are replaced together
+        <span class="field"><b>₹</b><input id="bCg" type="number" min="0" step="0.5" value="1.5"></span>
+      </label>
+      <fieldset>
+        <legend>Chance a bulb fails in week…</legend>
+        <div class="probs">
+          <label>1<input class="bp" type="number" min="0" max="1" step="0.05" value="0.10"></label>
+          <label>2<input class="bp" type="number" min="0" max="1" step="0.05" value="0.25"></label>
+          <label>3<input class="bp" type="number" min="0" max="1" step="0.05" value="0.35"></label>
+          <label>4<input class="bp" type="number" min="0" max="1" step="0.05" value="0.20"></label>
+          <label>5<input class="bp" type="number" min="0" max="1" step="0.05" value="0.10"></label>
+        </div>
+        <small id="bSum"></small>
+      </fieldset>
+      <button class="ghost" id="bPreset" type="button">Back to the slide problem</button>
+    </aside>
+
+    <div class="stage">
+
+      <div class="card" data-title="Formula Results">
+        <h2>What the formulas say</h2>
+        <div class="compare">
+          <div class="cmp ind"><span>Replace each bulb when it fails</span><strong id="bInd">–</strong><em>per week</em></div>
+          <div class="cmp grp"><span id="bGrpLabel">Replace all together</span><strong id="bGrp">–</strong><em>per week</em></div>
+          <div class="cmp save"><span>Saving</span><strong id="bSave">–</strong><em id="bSavePct"></em></div>
+        </div>
+        <p class="verdict keep" id="bVerdict"></p>
+        <canvas id="bChart" class="chart short" aria-label="Group replacement cost per week for each replacement interval"></canvas>
+        <div class="table-wrap"><table id="bTable"></table></div>
+        <p class="formula">Group cost per week = [group cost × N + individual cost × failures before the replacement week] ÷ t. Individual cost per week = N ÷ mean life × individual cost.</p>
+      </div>
+
+      <div class="card" data-title="Random Bulb Simulation">
+        <h2>Now try it with random bulbs</h2>
+        <p class="lead">Every bulb gets a random lifetime from the probabilities on the left. Both policies run side by side on the same number of bulbs.</p>
+        <div class="controls">
+          <label class="inline">Replace all every
+            <select id="bK"></select> weeks
+          </label>
+          <label class="inline">Run for
+            <input id="bWeeks" type="number" min="4" max="52" value="20" class="narrow"> weeks
+          </label>
+          <label class="inline">Speed
+            <select id="bSpeed">
+              <option value="1000">Slow</option>
+              <option value="600" selected>Normal</option>
+              <option value="250">Fast</option>
+            </select>
+          </label>
+        </div>
+        <div class="controls">
+          <button class="btn primary" id="bRun" type="button">Run</button>
+          <button class="btn" id="bStep" type="button">One week</button>
+          <button class="btn" id="bReset" type="button">Start over</button>
+          <span class="week" id="bWeekLabel">Week 0</span>
+        </div>
+
+        <div class="grids">
+          <figure>
+            <figcaption>Replace one by one</figcaption>
+            <canvas id="gridInd" class="grid" aria-label="Bulbs under individual replacement"></canvas>
+            <dl class="mini">
+              <div><dt>This week</dt><dd id="iWeek">–</dd></div>
+              <div><dt>Total so far</dt><dd id="iTotal">–</dd></div>
+              <div><dt>Average per week</dt><dd id="iAvg">–</dd></div>
+            </dl>
+          </figure>
+          <figure>
+            <figcaption id="gCap">Replace all together</figcaption>
+            <canvas id="gridGrp" class="grid" aria-label="Bulbs under group replacement"></canvas>
+            <dl class="mini">
+              <div><dt>This week</dt><dd id="gWeek">–</dd></div>
+              <div><dt>Total so far</dt><dd id="gTotal">–</dd></div>
+              <div><dt>Average per week</dt><dd id="gAvg">–</dd></div>
+            </dl>
+          </figure>
+        </div>
+
+        <div class="legend dots">
+          <span><i class="dot" style="background:#19e3c0"></i>Newly fitted</span>
+          <span><i class="dot" style="background:#ffcc33"></i>Getting old</span>
+          <span><i class="dot" style="background:#e8222e"></i>Failed this week, replaced singly</span>
+          <span><i class="dot" style="background:#2F6BFF"></i>Replaced in the group round</span>
+        </div>
+
+        <div class="legend">
+          <span><i class="sw line amber"></i>Cumulative cost, one by one</span>
+          <span><i class="sw line teal"></i>Cumulative cost, group</span>
+          <span><i class="sw dashed"></i>What the table predicts</span>
+        </div>
+        <canvas id="bSimChart" class="chart short" aria-label="Cumulative cost of both policies over the weeks"></canvas>
+        <p class="formula" id="bSimNote">The draws are random, so every run differs a little. Over more weeks the averages settle close to the table.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="startmenu" id="startMenu" hidden>
+  <button type="button" data-go="machine">Machine simulator</button>
+  <button type="button" data-go="bulbs">Bulb simulator</button>
+  <button type="button" data-go="top">Back to the top</button>
+</div>
+<div class="taskbar">
+  <button class="start" id="startBtn" type="button" aria-haspopup="true" aria-expanded="false">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Start
+  </button>
+  <span class="task">Replacement Theory Simulator</span>
+  <span class="tray" id="clock" aria-label="Clock"></span>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
